@@ -22,15 +22,15 @@ class ApiService {
   }
 
   async getQuotes(): Promise<Quote[]> {
-    return this.fetchWithErrorHandling<Quote[]>('/quotes');
+    return this.fetchWithErrorHandling<Quote[]>('quotes');
   }
 
   async getAverage(): Promise<Average> {
-    return this.fetchWithErrorHandling<Average>('/average');
+    return this.fetchWithErrorHandling<Average>('average');
   }
 
   async getSlippage(): Promise<Slippage[]> {
-    return this.fetchWithErrorHandling<Slippage[]>('/slippage');
+    return this.fetchWithErrorHandling<Slippage[]>('slippage');
   }
 }
 
