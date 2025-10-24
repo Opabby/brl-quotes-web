@@ -1,4 +1,3 @@
-import { useState, useEffect } from 'react';
 import {
   Box,
   Container,
@@ -11,57 +10,17 @@ import {
   Badge,
   SimpleGrid,
 } from '@chakra-ui/react';
-import { apiService } from './services/api';
-import type { Slippage } from './types/api';
+import { apiService } from '../services/api';
+import { useApiData } from '../hooks/useApiData';
+import { formatCurrency, formatTimestamp, formatPercentage } from '../utils/formatters';
+import { getProviderColor } from '../utils/constants';
+// import type { Slippage } from '../types/api';
 
 export function SlippagePage() {
-  const [slippages, setSlippages] = useState<Slippage[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
-
-  useEffect(() => {
-    const loadSlippage = async () => {
-      try {
-        setLoading(true);
-        setError(null);
-        const data = await apiService.getSlippage();
-        setSlippages(data);
-      } catch (err) {
-        setError(err instanceof Error ? err.message : 'Failed to load slippage data');
-        console.error('Error fetching slippage:', err);
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    loadSlippage();
-  }, []);
-
-  const formatCurrency = (value: number) => {
-    return `R$ ${value.toFixed(4)}`;
-  };
-
-  const formatPercentage = (value: number) => {
-    const sign = value > 0 ? '+' : '';
-    return `${sign}${value.toFixed(2)}%`;
-  };
-
-  const formatTimestamp = (timestamp?: string) => {
-    if (!timestamp) return 'N/A';
-    return new Date(timestamp).toLocaleString('pt-BR', {
-      dateStyle: 'short',
-      timeStyle: 'medium',
-    });
-  };
-
-  const getProviderColor = (provider?: string): string => {
-    const colors: Record<string, string> = {
-      'Wise': 'green',
-      'Nubank': 'purple',
-      'Nomad Global': 'blue',
-    };
-    return colors[provider || ''] || 'gray';
-  };
+  const { data: slippages, loading, error } = useApiData(
+    () => apiService.getSlippage(),
+    'Failed to load slippage data'
+  );
 
   const getSlippageColor = (slippage: number, type: 'buy' | 'sell'): string => {
     if (slippage === 0) return 'gray';
@@ -99,7 +58,7 @@ export function SlippagePage() {
         <VStack gap={8} align="center">
           <Spinner size="xl" color="blue.500" />
           <Text fontSize="lg" color="text.secondary">
-            Analyzing slippage from all sources...
+            Calculating slippage analysis...
           </Text>
         </VStack>
       </Container>
@@ -117,7 +76,7 @@ export function SlippagePage() {
               </Heading>
               <Text color="red.700">{error}</Text>
               <Text color="text.muted" fontSize="sm">
-                Make sure your API is running at http://localhost:3000
+                Make sure your API is running properly
               </Text>
             </VStack>
           </Card.Body>
@@ -126,7 +85,7 @@ export function SlippagePage() {
     );
   }
 
-  if (slippages.length === 0) {
+  if (!slippages || slippages.length === 0) {
     return (
       <Container maxW="container.xl" py={10}>
         <Box textAlign="center">
@@ -146,35 +105,25 @@ export function SlippagePage() {
             Slippage Analysis
           </Heading>
           <Text fontSize="lg" color="text.secondary" mb={4}>
-            How each provider compares to the market average
+            Percentage difference from market average across {slippages.length} sources
           </Text>
-          <Badge colorScheme="orange" fontSize="sm" px={3} py={1}>
-            Percentage Difference
+          <Badge colorScheme="blue" fontSize="sm" px={3} py={1}>
+            Live Comparison
           </Badge>
         </Box>
 
-        <Card.Root bg="blue.50" borderColor="blue.200">
-          <Card.Body>
-            <VStack align="start" gap={2}>
-              <Heading size="sm" color="blue.800">
-                💡 Understanding Slippage
-              </Heading>
-              <Text fontSize="sm" color="blue.700">
-                <strong>Slippage</strong> shows how much each provider's rates differ from the market average.
-              </Text>
-              <HStack gap={4} wrap="wrap" fontSize="xs" color="blue.600">
-                <Box>
-                  <strong>Negative %:</strong> Below average (better for buy)
-                </Box>
-                <Box>
-                  <strong>Positive %:</strong> Above average (worse for buy)
-                </Box>
-                <Box>
-                  <strong>0%:</strong> Exactly at average
-                </Box>
-              </HStack>
-            </VStack>
-          </Card.Body>
+        <Card.Root bg="bg.subtle" borderColor="border.default" p={4}>
+          <VStack align="start" gap={2}>
+            <Heading size="sm" color="text.primary">
+              💡 How to Read Slippage
+            </Heading>
+            <Text fontSize="sm" color="text.secondary">
+              <strong>Buy Price:</strong> Negative slippage = better rate (pay less BRL per USD)
+            </Text>
+            <Text fontSize="sm" color="text.secondary">
+              <strong>Sell Price:</strong> Positive slippage = better rate (receive more BRL per USD)
+            </Text>
+          </VStack>
         </Card.Root>
 
         <SimpleGrid columns={{ base: 1, md: 2, lg: 3 }} gap={6}>
@@ -265,7 +214,7 @@ export function SlippagePage() {
                           </Text>
                         </HStack>
                         <HStack justify="space-between" fontSize="xs">
-                          <Text color="text.muted">Average Buy:</Text>
+                          <Text color="text.muted">Market Buy:</Text>
                           <Text color="text.primary" fontWeight="medium">
                             {formatCurrency(slippage.additional_info.average_buy_price)}
                           </Text>
@@ -278,44 +227,12 @@ export function SlippagePage() {
                           </Text>
                         </HStack>
                         <HStack justify="space-between" fontSize="xs">
-                          <Text color="text.muted">Average Sell:</Text>
+                          <Text color="text.muted">Market Sell:</Text>
                           <Text color="text.primary" fontWeight="medium">
                             {formatCurrency(slippage.additional_info.average_sell_price)}
                           </Text>
                         </HStack>
                       </VStack>
-                    </Box>
-
-                    <Box
-                      bg="bg.muted"
-                      p={2}
-                      borderRadius="md"
-                      fontSize="xs"
-                    >
-                      <HStack justify="space-between">
-                        <Text color="text.muted">Buy Difference:</Text>
-                        <Text 
-                          color={buySlippageColor === 'green' ? 'green.600' : 'red.600'}
-                          fontWeight="bold"
-                        >
-                          {formatCurrency(
-                            slippage.additional_info.quote_buy_price - 
-                            slippage.additional_info.average_buy_price
-                          )}
-                        </Text>
-                      </HStack>
-                      <HStack justify="space-between" mt={1}>
-                        <Text color="text.muted">Sell Difference:</Text>
-                        <Text 
-                          color={sellSlippageColor === 'green' ? 'green.600' : 'red.600'}
-                          fontWeight="bold"
-                        >
-                          {formatCurrency(
-                            slippage.additional_info.quote_sell_price - 
-                            slippage.additional_info.average_sell_price
-                          )}
-                        </Text>
-                      </HStack>
                     </Box>
                   </VStack>
                 </Card.Body>
@@ -338,69 +255,36 @@ export function SlippagePage() {
         <Card.Root bg="bg.subtle" borderColor="border.default">
           <Card.Header>
             <Heading size="md" color="text.primary">
-              Best Options
+              Summary
             </Heading>
           </Card.Header>
           <Card.Body>
-            <SimpleGrid columns={{ base: 1, md: 2 }} gap={6}>
-              <Box>
-                <Text fontSize="sm" fontWeight="bold" color="text.primary" mb={3}>
-                  🏆 Best for Buying USD (lowest buy price)
+            <SimpleGrid columns={{ base: 1, md: 2 }} gap={4}>
+              <Box textAlign="center">
+                <Text fontSize="sm" color="text.muted" mb={1}>
+                  Best Buy Rate (Lowest Slippage)
                 </Text>
-                {(() => {
-                  const best = slippages.reduce((min, curr) => 
-                    curr.buy_price_slippage < min.buy_price_slippage ? curr : min
-                  );
-                  return (
-                    <Box
-                      bg="green.50"
-                      p={4}
-                      borderRadius="md"
-                      borderWidth="1px"
-                      borderColor="green.200"
-                    >
-                      <Heading size="sm" color="green.700" mb={2}>
-                        {best.additional_info.provider}
-                      </Heading>
-                      <Text fontSize="2xl" fontWeight="bold" color="green.600">
-                        {formatPercentage(best.buy_price_slippage)}
-                      </Text>
-                      <Text fontSize="xs" color="green.700" mt={1}>
-                        {formatCurrency(best.additional_info.quote_buy_price)} per dollar
-                      </Text>
-                    </Box>
-                  );
-                })()}
+                <Text fontSize="2xl" fontWeight="bold" color="green.600">
+                  {formatPercentage(
+                    Math.min(...slippages.map(s => s.buy_price_slippage))
+                  )}
+                </Text>
+                <Text fontSize="xs" color="text.secondary" mt={1}>
+                  {slippages.find(s => s.buy_price_slippage === Math.min(...slippages.map(x => x.buy_price_slippage)))?.additional_info?.provider}
+                </Text>
               </Box>
-
-              <Box>
-                <Text fontSize="sm" fontWeight="bold" color="text.primary" mb={3}>
-                  🏆 Best for Selling BRL (highest sell price)
+              <Box textAlign="center">
+                <Text fontSize="sm" color="text.muted" mb={1}>
+                  Best Sell Rate (Highest Slippage)
                 </Text>
-                {(() => {
-                  const best = slippages.reduce((max, curr) => 
-                    curr.sell_price_slippage > max.sell_price_slippage ? curr : max
-                  );
-                  return (
-                    <Box
-                      bg="blue.50"
-                      p={4}
-                      borderRadius="md"
-                      borderWidth="1px"
-                      borderColor="blue.200"
-                    >
-                      <Heading size="sm" color="blue.700" mb={2}>
-                        {best.additional_info.provider}
-                      </Heading>
-                      <Text fontSize="2xl" fontWeight="bold" color="blue.600">
-                        {formatPercentage(best.sell_price_slippage)}
-                      </Text>
-                      <Text fontSize="xs" color="blue.700" mt={1}>
-                        {formatCurrency(best.additional_info.quote_sell_price)} per dollar
-                      </Text>
-                    </Box>
-                  );
-                })()}
+                <Text fontSize="2xl" fontWeight="bold" color="blue.600">
+                  {formatPercentage(
+                    Math.max(...slippages.map(s => s.sell_price_slippage))
+                  )}
+                </Text>
+                <Text fontSize="xs" color="text.secondary" mt={1}>
+                  {slippages.find(s => s.sell_price_slippage === Math.max(...slippages.map(x => x.sell_price_slippage)))?.additional_info?.provider}
+                </Text>
               </Box>
             </SimpleGrid>
           </Card.Body>

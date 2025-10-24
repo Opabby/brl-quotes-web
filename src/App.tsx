@@ -7,9 +7,9 @@ import {
   Button,
 } from '@chakra-ui/react';
 import { ColorModeButton } from './components/ui/color-mode';
-import { AveragePage } from './AveragePage';
-import { QuotesPage } from './QuotesPage';
-import { SlippagePage } from './SlippagePage';
+import { AveragePage } from './pages/AveragePage';
+import { QuotesPage } from './pages/QuotesPage';
+import { SlippagePage } from './pages/SlippagePage';
 
 type Page = 'home' | 'quotes' | 'average' | 'slippage';
 

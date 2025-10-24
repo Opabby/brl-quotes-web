@@ -1,4 +1,3 @@
-import { useState, useEffect } from 'react';
 import {
   Box,
   Container,
@@ -10,43 +9,16 @@ import {
   Spinner,
   Badge,
 } from '@chakra-ui/react';
-import { apiService } from './services/api';
-import type { Average } from './types/api';
+import { apiService } from '../services/api';
+import { useApiData } from '../hooks/useApiData';
+import { formatCurrency, formatTimestamp } from '../utils/formatters';
+// import type { Average } from '../types/api';
 
 export function AveragePage() {
-  const [average, setAverage] = useState<Average | null>(null);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
-
-  useEffect(() => {
-    const loadAverage = async () => {
-      try {
-        setLoading(true);
-        setError(null);
-        const data = await apiService.getAverage();
-        setAverage(data);
-      } catch (err) {
-        setError(err instanceof Error ? err.message : 'Failed to load average rates');
-        console.error('Error fetching average:', err);
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    loadAverage();
-  }, []);
-
-  const formatCurrency = (value: number) => {
-    return `R$ ${value.toFixed(4)}`;
-  };
-
-  const formatTimestamp = (timestamp?: string) => {
-    if (!timestamp) return 'N/A';
-    return new Date(timestamp).toLocaleString('pt-BR', {
-      dateStyle: 'short',
-      timeStyle: 'medium',
-    });
-  };
+  const { data: average, loading, error } = useApiData(
+    () => apiService.getAverage(),
+    'Failed to load average rates'
+  );
 
   if (loading) {
     return (
