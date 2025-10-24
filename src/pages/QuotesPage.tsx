@@ -1,4 +1,3 @@
-import { useState, useEffect } from 'react';
 import {
   Box,
   Container,
@@ -11,52 +10,17 @@ import {
   Badge,
   SimpleGrid,
 } from '@chakra-ui/react';
-import { apiService } from './services/api';
-import type { Quote } from './types/api';
+import { apiService } from '../services/api';
+import { useApiData } from '../hooks/useApiData';
+import { formatCurrency, formatTimestamp } from '../utils/formatters';
+import { getProviderColor } from '../utils/constants';
+import type { Quote } from '../types/api';
 
 export function QuotesPage() {
-  const [quotes, setQuotes] = useState<Quote[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
-
-  useEffect(() => {
-    const loadQuotes = async () => {
-      try {
-        setLoading(true);
-        setError(null);
-        const data = await apiService.getQuotes();
-        setQuotes(data);
-      } catch (err) {
-        setError(err instanceof Error ? err.message : 'Failed to load quotes');
-        console.error('Error fetching quotes:', err);
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    loadQuotes();
-  }, []);
-
-  const formatCurrency = (value: number) => {
-    return `R$ ${value.toFixed(4)}`;
-  };
-
-  const formatTimestamp = (timestamp?: string) => {
-    if (!timestamp) return 'N/A';
-    return new Date(timestamp).toLocaleString('pt-BR', {
-      dateStyle: 'short',
-      timeStyle: 'medium',
-    });
-  };
-
-  const getProviderColor = (provider?: string): string => {
-    const colors: Record<string, string> = {
-      'Wise': 'green',
-      'Nubank': 'purple',
-      'Nomad Global': 'blue',
-    };
-    return colors[provider || ''] || 'gray';
-  };
+  const { data: quotes, loading, error } = useApiData(
+    () => apiService.getQuotes(),
+    'Failed to load quotes'
+  );
 
   const calculateSpread = (quote: Quote) => {
     const spread = quote.buy_price - quote.sell_price;
@@ -97,7 +61,7 @@ export function QuotesPage() {
     );
   }
 
-  if (quotes.length === 0) {
+  if (!quotes || quotes.length === 0) {
     return (
       <Container maxW="container.xl" py={10}>
         <Box textAlign="center">
